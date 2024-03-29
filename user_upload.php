@@ -8,9 +8,10 @@ class Main
         // Get options from CLI argument list
         $this->options = getopt("u:p:h:", ["file:", "create_table", "dry_run", "help"]);
 
-        if (isset($this->options['help'])) {
+        if (empty($this->options) || isset($this->options['help'])) {
             $this->consoleHelp();
         }
+
     }
 
     // Display Help menu
