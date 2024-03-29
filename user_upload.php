@@ -2,7 +2,15 @@
 // Main class to handle the main script
 class Main
 {
-    private array $options = [];
+    private array $options;
+    public string $host;
+    public string $user;
+    public string $password;
+    public string $dbname;
+    public bool $hasFile;
+    public bool $shouldCreateTable;
+    public bool $idDryRun;
+
     public function __construct()
     {
         // Get options from CLI argument list
@@ -11,7 +19,18 @@ class Main
         if (empty($this->options) || isset($this->options['help'])) {
             $this->consoleHelp();
         }
-
+        if (isset($this->options['u'])) {
+            $this->user = $this->options['u'];
+        }
+        if (isset($this->options['p'])) {
+            $this->password = $this->options['p'];
+        }
+        if (isset($this->options['h'])) {
+            $this->host = $this->options['h'];
+        }
+        $this->hasFile = isset($this->options['file']);
+        $this->shouldCreateTable = isset($this->options['create_table']);
+        $this->idDryRun = isset($this->options['dry_run']);
     }
 
     // Display Help menu
