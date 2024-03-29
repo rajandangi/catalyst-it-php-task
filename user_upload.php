@@ -1,4 +1,22 @@
 <?php
+
+// Handle database connection and operations
+class Database
+{
+    public readonly PDO $pdo;
+    public function __construct(string $host, string $user, string $password)
+    {
+        try {
+            // create new PDO connection
+            $this->pdo = new PDO('mysql:host=' . $host . ';port=3306;dbname=catalyst', $user, $password);
+            // set the PDO error mode to exception
+            $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            echo "Database Connected successfully" . PHP_EOL;
+        } catch (PDOException $e) {
+            die("Database connection failed: " . $e->getMessage() . PHP_EOL);
+        }
+    }
+}
 // Main class to handle the main script
 class Main
 {
@@ -6,11 +24,10 @@ class Main
     public string $host;
     public string $user;
     public string $password;
-    public string $dbname;
     public bool $hasFile;
     public bool $shouldCreateTable;
     public bool $idDryRun;
-
+    public Database $db;
     public function __construct()
     {
         // Get options from CLI argument list
@@ -42,6 +59,14 @@ class Main
     // Handle the actions based on the options
     private function handleActions(): void
     {
+        // Initialize database connection
+        try {
+            $this->db = new Database($this->host, $this->user, $this->password);
+        } catch (Exception $e) {
+            echo "Database connection error: " . $e->getMessage() . PHP_EOL;
+            exit;
+        }
+
         if ($this->shouldCreateTable) {
             echo "Creating table" . PHP_EOL;
             exit;
