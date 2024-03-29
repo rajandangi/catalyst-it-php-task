@@ -19,22 +19,41 @@ class Main
         if (empty($this->options) || isset($this->options['help'])) {
             $this->consoleHelp();
         }
-        if (isset($this->options['u'])) {
-            $this->user = $this->options['u'];
-        }
-        if (isset($this->options['p'])) {
-            $this->password = $this->options['p'];
-        }
-        if (isset($this->options['h'])) {
+
+        if (isset($this->options['u']) && isset($this->options['p']) && isset($this->options['h'])) {
             $this->host = $this->options['h'];
+            $this->user = $this->options['u'];
+            $this->password = $this->options['p'];
+            echo "MySQL username: {$this->user}" . PHP_EOL;
+            echo "MySQL password: {$this->password}" . PHP_EOL;
+            echo "MySQL host: {$this->host}" . PHP_EOL;
+        } else {
+            echo "Please provide the MySQL username, password and host" . PHP_EOL;
+            exit;
         }
+
         $this->hasFile = isset($this->options['file']);
         $this->shouldCreateTable = isset($this->options['create_table']);
         $this->idDryRun = isset($this->options['dry_run']);
+
+        $this->handleActions();
     }
 
+    // Handle the actions based on the options
+    private function handleActions(): void
+    {
+        if ($this->shouldCreateTable) {
+            echo "Creating table" . PHP_EOL;
+            exit;
+        }
+        if ($this->hasFile) {
+            echo "Parsing file" . PHP_EOL;
+            exit;
+        }
+        echo "Please provide the --file option or --create_table option to perform further actions." . PHP_EOL;
+    }
     // Display Help menu
-    public function consoleHelp()
+    public function consoleHelp(): void
     {
         $help = <<<HELP
         Usage: php user_upload.php [options]
