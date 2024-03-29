@@ -12,13 +12,20 @@ class DBConfig
     ) {
     }
 
-    public static function init()
+    public static function init(array $options)
     {
-        if (file_exists('db.ini')) {
-            $env = parse_ini_file('db.ini');
+        if (isset($options['u']) && isset($options['p']) && isset($options['h'])) {
+            //set if db credentials are provided in the command line
+            self::$instance = new DBConfig($options['h'], $options['u'], $options['p'], 'catalyst');
+        } elseif (file_exists('.env')) {
+            //else, set if db credentials are provided in the .env file
+            $env = parse_ini_file('.env');
             self::$instance = new DBConfig($env['DB_HOST'], $env['DB_USER'], $env['DB_PASSWORD'], $env['DB_NAME']);
-            var_dump(self::$instance);
+        } elseif (self::$instance === null) {
+            echo "Please provide database credentials" . PHP_EOL . ">> Use --help for more information";
+            exit;
         }
+        var_dump(self::$instance);
     }
 }
 
@@ -43,9 +50,6 @@ class Database
 class Main
 {
     private array $options;
-    public string $host;
-    public string $user;
-    public string $password;
     public bool $hasFile;
     public bool $shouldCreateTable;
     public bool $idDryRun;
@@ -60,13 +64,7 @@ class Main
         }
 
         if (isset($this->options['u']) && isset($this->options['p']) && isset($this->options['h'])) {
-            $this->host = $this->options['h'];
-            $this->user = $this->options['u'];
-            $this->password = $this->options['p'];
-            echo "MySQL username: {$this->user}" . PHP_EOL;
-            echo "MySQL password: {$this->password}" . PHP_EOL;
-            echo "MySQL host: {$this->host}" . PHP_EOL;
-            DBConfig::init();
+            DBConfig::init($this->options);
         } else {
             echo "Please provide the MySQL username, password and host" . PHP_EOL;
             exit;
@@ -83,12 +81,12 @@ class Main
     private function handleActions(): void
     {
         // Initialize database connection
-        try {
-            $this->db = new Database($this->host, $this->user, $this->password);
-        } catch (Exception $e) {
-            echo "Database connection error: " . $e->getMessage() . PHP_EOL;
-            exit;
-        }
+        // try {
+        //     $this->db = new Database($this->host, $this->user, $this->password);
+        // } catch (Exception $e) {
+        //     echo "Database connection error: " . $e->getMessage() . PHP_EOL;
+        //     exit;
+        // }
 
         if ($this->shouldCreateTable) {
             echo "Creating table" . PHP_EOL;
