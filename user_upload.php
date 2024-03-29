@@ -1,4 +1,26 @@
 <?php
+// Initialize the database configuration
+class DBConfig
+{
+    private static ?DBConfig $instance;
+
+    private function __construct(
+        public string $host,
+        public string $user,
+        public string $password,
+        public string $dbname
+    ) {
+    }
+
+    public static function init()
+    {
+        if (file_exists('db.ini')) {
+            $env = parse_ini_file('db.ini');
+            self::$instance = new DBConfig($env['DB_HOST'], $env['DB_USER'], $env['DB_PASSWORD'], $env['DB_NAME']);
+            var_dump(self::$instance);
+        }
+    }
+}
 
 // Handle database connection and operations
 class Database
@@ -44,6 +66,7 @@ class Main
             echo "MySQL username: {$this->user}" . PHP_EOL;
             echo "MySQL password: {$this->password}" . PHP_EOL;
             echo "MySQL host: {$this->host}" . PHP_EOL;
+            DBConfig::init();
         } else {
             echo "Please provide the MySQL username, password and host" . PHP_EOL;
             exit;
