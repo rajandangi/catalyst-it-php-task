@@ -56,7 +56,7 @@ class Main
     private array $options;
     public bool $hasFile;
     public bool $shouldCreateTable;
-    public bool $idDryRun;
+    public bool $isDryRun;
     public Database $db;
     private DBConfig $dbConfig;
     public function __construct()
@@ -72,7 +72,7 @@ class Main
 
         $this->hasFile = isset($this->options['file']);
         $this->shouldCreateTable = isset($this->options['create_table']);
-        $this->idDryRun = isset($this->options['dry_run']);
+        $this->isDryRun = isset($this->options['dry_run']);
 
         $this->handleActions();
     }
