@@ -49,6 +49,23 @@ class Database
             die("Database connection failed: " . $e->getMessage() . PHP_EOL);
         }
     }
+
+    // Create users table
+    public function createUserTable(): void
+    {
+        $sql = "CREATE TABLE IF NOT EXISTS users (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(50) NOT NULL,
+            surname VARCHAR(50) NOT NULL,
+            email VARCHAR(255) NOT NULL UNIQUE
+        )ENGINE=InnoDB DEFAULT CHARSET=UTF8;";
+        try {
+            $this->pdo->query($sql);
+            echo "Table users created successfully" . PHP_EOL;
+        } catch (PDOException $e) {
+            die("Error creating table: " . $e->getMessage() . PHP_EOL);
+        }
+    }
 }
 // Main class to handle the main script
 class Main
@@ -89,7 +106,7 @@ class Main
         }
 
         if ($this->shouldCreateTable) {
-            echo "Creating table" . PHP_EOL;
+            $this->db->createUserTable();
             exit;
         }
         if ($this->hasFile) {
