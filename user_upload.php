@@ -102,7 +102,14 @@ class CSVProcessor
     public function parseCSV(): void
     {
         try {
-            $handle = fopen($this->fileName, 'r');
+            if (!file_exists($this->fileName) || !is_readable($this->fileName)) {
+                throw new Exception("CSV file does not exist or is not readable");
+            }
+
+            // Throw exception if file cannot be opened
+            if (($handle = fopen($this->fileName, 'r')) === false) {
+                throw new Exception("Could not open the file: $this->fileName");
+            }
 
             // Get the first row (header) of the CSV file
             $header = fgetcsv($handle, 255);
@@ -122,6 +129,7 @@ class CSVProcessor
                 $this->db->insertUser($name, $surname, $email);
             }
             fclose($handle);
+
             echo "Success! All data imported successfully into the database." . PHP_EOL;
         } catch (Exception $e) {
             die("Error reading CSV file: " . $e->getMessage() . PHP_EOL);
