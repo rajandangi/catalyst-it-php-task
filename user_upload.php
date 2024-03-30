@@ -2,7 +2,7 @@
 // Initialize the database configuration
 class DBConfig
 {
-    private static ?DBConfig $instance;
+    private static ?DBConfig $instance = null;
 
     private function __construct(
         public string $host,
@@ -12,20 +12,24 @@ class DBConfig
     ) {
     }
 
-    public static function init(array $options)
+    public static function getInstance(array $options): DBConfig
     {
-        if (isset($options['u']) && isset($options['p']) && isset($options['h'])) {
-            //set if db credentials are provided in the command line
-            self::$instance = new DBConfig($options['h'], $options['u'], $options['p'], 'catalyst');
-        } elseif (file_exists('.env')) {
-            //else, set if db credentials are provided in the .env file
-            $env = parse_ini_file('.env');
-            self::$instance = new DBConfig($env['DB_HOST'], $env['DB_USER'], $env['DB_PASSWORD'], $env['DB_NAME']);
-        } elseif (self::$instance === null) {
-            echo "Please provide database credentials" . PHP_EOL . ">> Use --help for more information";
-            exit;
+        if (self::$instance === null) {
+            if (isset($options['u']) && isset($options['p']) && isset($options['h'])) {
+                //set if db credentials are provided in the command line
+                self::$instance = new DBConfig($options['h'], $options['u'], $options['p'], 'catalyst');
+            } elseif (file_exists('.env')) {
+                //else, set if db credentials are provided in the .env file
+                $env = parse_ini_file('.env');
+                self::$instance = new DBConfig($env['DB_HOST'], $env['DB_USER'], $env['DB_PASSWORD'], $env['DB_NAME']);
+            }
+
+            if (self::$instance === null) {
+                echo "Please provide database credentials" . PHP_EOL . ">> Use --help for more information" . PHP_EOL;
+                exit;
+            }
         }
-        var_dump(self::$instance);
+        return self::$instance;
     }
 }
 
@@ -33,11 +37,11 @@ class DBConfig
 class Database
 {
     public readonly PDO $pdo;
-    public function __construct(string $host, string $user, string $password)
+    public function __construct(DBConfig $dbConfig)
     {
         try {
             // create new PDO connection
-            $this->pdo = new PDO('mysql:host=' . $host . ';port=3306;dbname=catalyst', $user, $password);
+            $this->pdo = new PDO('mysql:host=' . $dbConfig->host . ';port=3306;dbname=' . $dbConfig->dbname, $dbConfig->user, $dbConfig->password);
             // set the PDO error mode to exception
             $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             echo "Database Connected successfully" . PHP_EOL;
@@ -54,6 +58,7 @@ class Main
     public bool $shouldCreateTable;
     public bool $idDryRun;
     public Database $db;
+    private DBConfig $dbConfig;
     public function __construct()
     {
         // Get options from CLI argument list
@@ -63,12 +68,7 @@ class Main
             $this->consoleHelp();
         }
 
-        if (isset($this->options['u']) && isset($this->options['p']) && isset($this->options['h'])) {
-            DBConfig::init($this->options);
-        } else {
-            echo "Please provide the MySQL username, password and host" . PHP_EOL;
-            exit;
-        }
+        $this->dbConfig = DBConfig::getInstance($this->options);
 
         $this->hasFile = isset($this->options['file']);
         $this->shouldCreateTable = isset($this->options['create_table']);
@@ -81,12 +81,12 @@ class Main
     private function handleActions(): void
     {
         // Initialize database connection
-        // try {
-        //     $this->db = new Database($this->host, $this->user, $this->password);
-        // } catch (Exception $e) {
-        //     echo "Database connection error: " . $e->getMessage() . PHP_EOL;
-        //     exit;
-        // }
+        try {
+            $this->db = new Database($this->dbConfig);
+        } catch (Exception $e) {
+            echo "Database connection error: " . $e->getMessage() . PHP_EOL;
+            exit;
+        }
 
         if ($this->shouldCreateTable) {
             echo "Creating table" . PHP_EOL;
