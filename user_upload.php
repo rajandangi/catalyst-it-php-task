@@ -134,6 +134,16 @@ class CSVProcessor
                 $surname = Helper::formatName($surname);
                 $email = Helper::formatEmail($email);
 
+                // Validate the name and email
+                if (!Helper::formatName($name)) {
+                    throw new Exception("Invalid name: $name");
+                }
+                if (!Helper::validateName($surname)) {
+                    throw new Exception("Invalid surname: $surname");
+                }
+                if (!Helper::validateEmail($email)) {
+                    throw new Exception("Invalid email: $email");
+                }
                 $this->db->insertUser($name, $surname, $email);
             }
             fclose($handle);
@@ -148,6 +158,18 @@ class CSVProcessor
 // Helper Class to handle various utility functions
 class Helper
 {
+    // Validate email
+    public static function validateEmail(string $email): bool
+    {
+        return filter_var($email, FILTER_VALIDATE_EMAIL);
+    }
+
+    // validate name
+    public static function validateName(string $name): bool
+    {
+        return preg_match('/^[A-Za-z\s-]+$/u', $name);
+    }
+
     public static function formatName(string $string): string
     {
         // remove white space from the beginning and end of the string
