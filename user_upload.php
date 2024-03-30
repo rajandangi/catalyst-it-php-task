@@ -10,6 +10,10 @@ class DBConfig
         public string $password,
         public string $dbname
     ) {
+        // Sanitize the database credentials
+        $this->host = Helper::sanitizeString($host);
+        $this->user = Helper::sanitizeString($user);
+        $this->password = Helper::sanitizeString($password);
     }
 
     public static function getInstance(array $options): DBConfig
@@ -21,6 +25,9 @@ class DBConfig
             } elseif (file_exists('.env')) {
                 //else, set if db credentials are provided in the .env file
                 $env = parse_ini_file('.env');
+                if ($env === false) {
+                    die("Error reading .env file" . PHP_EOL);
+                }
                 self::$instance = new DBConfig($env['DB_HOST'], $env['DB_USER'], $env['DB_PASSWORD'], $env['DB_NAME']);
             }
 
@@ -68,6 +75,7 @@ class Database
             surname VARCHAR(50) NOT NULL,
             email VARCHAR(255) NOT NULL UNIQUE
         )ENGINE=InnoDB DEFAULT CHARSET=UTF8;";
+
         try {
             $this->pdo->query($sql);
             Helper::consoleLog("Table users created successfully");
@@ -176,6 +184,20 @@ class CSVProcessor
 // Helper Class to handle various utility functions
 class Helper
 {
+    public static function sanitizeString(string $data): string
+    {
+        // Remove any HTML tags
+        $data = strip_tags($data);
+
+        // Escape special characters
+        $data = htmlspecialchars(trim($data), ENT_QUOTES);
+
+        // Remove extra whitespace
+        $data = trim($data);
+
+        return $data;
+    }
+
     // Validate email
     public static function validateEmail(string $email): bool
     {
