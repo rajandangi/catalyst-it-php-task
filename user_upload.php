@@ -122,10 +122,18 @@ class CSVProcessor
             if ($nameIndex === false || $surnameIndex === false || $emailIndex === false) {
                 throw new Exception("Invalid CSV file format");
             }
+
+            // Read the CSV file row by row
             while (($row = fgetcsv($handle, 255)) !== false) {
                 $name = $row[$nameIndex];
                 $surname = $row[$surnameIndex];
                 $email = $row[$emailIndex];
+
+                // Format the name and email
+                $name = Helper::formatName($name);
+                $surname = Helper::formatName($surname);
+                $email = Helper::formatEmail($email);
+
                 $this->db->insertUser($name, $surname, $email);
             }
             fclose($handle);
@@ -136,6 +144,27 @@ class CSVProcessor
         }
     }
 }
+
+// Helper Class to handle various utility functions
+class Helper
+{
+    public static function formatName(string $string): string
+    {
+        // remove white space from the beginning and end of the string
+        $string = trim($string, ' ');
+        // capitalize the first letter of each word
+        $string = ucfirst($string);
+
+        return $string;
+    }
+
+    public static function formatEmail(string $string): string
+    {
+        // remove white space and make lowercase
+        return strtolower(trim($string));
+    }
+}
+
 // Main class to handle the main script
 class Main
 {
