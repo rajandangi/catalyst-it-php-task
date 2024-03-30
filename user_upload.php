@@ -89,20 +89,23 @@ class Database
         return $this->pdo->prepare("INSERT INTO users (name, surname, email) VALUES (:name, :surname, :email)");
     }
 
-    // insert user data
-    public function insertUser(PDOStatement $stmt, string $name, string $surname, string $email): void
+    // insert user data in batch
+    public function insertUsers(PDOStatement $stmt, array $batchData): void
     {
-        // bind and save data to database
-        $stmt->bindValue(":name", $name, PDO::PARAM_STR);
-        $stmt->bindValue(":surname", $surname, PDO::PARAM_STR);
-        $stmt->bindValue(":email", $email, PDO::PARAM_STR);
-        $stmt->execute();
+        foreach ($batchData as $data) {
+            foreach ($data as $param => $value) {
+                // Bind and Sanitize the data before saving to the database
+                $stmt->bindValue($param, $value, PDO::PARAM_STR);
+            }
+            $stmt->execute(); // Execute the prepared statement with the current data
+        }
     }
 }
 
 // Parse the CSV file and to insert into the database
 class CSVProcessor
 {
+    private const BATCH_SIZE = 1000;
     public function __construct(
         private string $fileName,
         private Database $db,
@@ -126,7 +129,7 @@ class CSVProcessor
             $header = fgetcsv($handle, 255);
             $header = array_map('trim', $header);
 
-            // GEt the correct index of the columns
+            // Get the correct index of the columns
             $nameIndex = array_search('name', $header);
             $surnameIndex = array_search('surname', $header);
             $emailIndex = array_search('email', $header);
@@ -139,6 +142,9 @@ class CSVProcessor
 
             // Prepare the insert statement
             $stmt = $this->db->prepareInsertUser();
+
+            $batchData = [];
+            $rowCount = 0;
 
             // Read the CSV file row by row
             while (($row = fgetcsv($handle, 255)) !== false) {
@@ -161,10 +167,27 @@ class CSVProcessor
                 if (!Helper::validateEmail($email)) {
                     throw new Exception("Invalid email: $email");
                 }
-                $this->db->insertUser($stmt, $name, $surname, $email);
+                $batchData[] = [
+                    ':name' => $name,
+                    ':surname' => $surname,
+                    ':email' => $email
+                ];
+                $rowCount++;
+                // if batch size is reached, insert the batch into the database
+                if ($rowCount % self::BATCH_SIZE === 0) {
+                    $this->db->insertUsers($stmt, $batchData);
+                    $batchData = []; // Reset the batch data
+                }
             }
+
+            // Insert the remaining data
+            if (!empty($batchData)) {
+                $this->db->insertUsers($stmt, $batchData);
+            }
+
             fclose($handle);
 
+            // Exit without inserting data into the database if it's a dry run
             if ($this->isDryRun) {
                 $this->db->pdo->rollBack();
                 Helper::consoleLog("Dry run completed. No data inserted into the database.");
@@ -311,4 +334,10 @@ class Main
     }
 
 }
-new Main();
+
+// Run the main script
+try {
+    new Main();
+} catch (Exception $e) {
+    die("Error: " . $e->getMessage() . PHP_EOL);
+}
