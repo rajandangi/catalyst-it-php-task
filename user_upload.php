@@ -76,11 +76,15 @@ class Database
             die("Error creating table: " . $e->getMessage() . PHP_EOL);
         }
     }
-    // insert user data
-    public function insertUser(string $name, string $surname, string $email): void
+    // prepare user insert statement
+    public function prepareInsertUser(): PDOStatement
     {
-        $stmt = $this->pdo->prepare("INSERT INTO users (name, surname, email) VALUES (:name, :surname, :email)");
+        return $this->pdo->prepare("INSERT INTO users (name, surname, email) VALUES (:name, :surname, :email)");
+    }
 
+    // insert user data
+    public function insertUser(PDOStatement $stmt, string $name, string $surname, string $email): void
+    {
         // bind and save data to database
         $stmt->bindValue(":name", $name, PDO::PARAM_STR);
         $stmt->bindValue(":surname", $surname, PDO::PARAM_STR);
@@ -123,6 +127,9 @@ class CSVProcessor
                 throw new Exception("Invalid CSV file format");
             }
 
+            // Prepare the insert statement
+            $stmt = $this->db->prepareInsertUser();
+
             // Read the CSV file row by row
             while (($row = fgetcsv($handle, 255)) !== false) {
                 $name = $row[$nameIndex];
@@ -144,7 +151,7 @@ class CSVProcessor
                 if (!Helper::validateEmail($email)) {
                     throw new Exception("Invalid email: $email");
                 }
-                $this->db->insertUser($name, $surname, $email);
+                $this->db->insertUser($stmt, $name, $surname, $email);
             }
             fclose($handle);
 
