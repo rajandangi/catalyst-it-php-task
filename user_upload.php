@@ -25,8 +25,7 @@ class DBConfig
             }
 
             if (self::$instance === null) {
-                echo "Please provide database credentials" . PHP_EOL . ">> Use --help for more information" . PHP_EOL;
-                exit;
+                die("Please provide database credentials" . PHP_EOL . ">> Use --help for more information" . PHP_EOL);
             }
         }
         return self::$instance;
@@ -44,7 +43,7 @@ class Database
             $this->pdo = new PDO('mysql:host=' . $dbConfig->host . ';port=3306;dbname=' . $dbConfig->dbname, $dbConfig->user, $dbConfig->password);
             // set the PDO error mode to exception
             $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            echo "Database Connected successfully" . PHP_EOL;
+            Helper::consoleLog("Database Connected successfully");
         } catch (PDOException $e) {
             die("Database connection failed: " . $e->getMessage() . PHP_EOL);
         }
@@ -55,7 +54,7 @@ class Database
         $sql = "DROP TABLE IF EXISTS $tableName";
         try {
             $this->pdo->query($sql);
-            echo "Table $tableName dropped successfully" . PHP_EOL;
+            Helper::consoleLog("Table $tableName dropped successfully");
         } catch (PDOException $e) {
             die("Error dropping table: " . $e->getMessage() . PHP_EOL);
         }
@@ -71,7 +70,7 @@ class Database
         )ENGINE=InnoDB DEFAULT CHARSET=UTF8;";
         try {
             $this->pdo->query($sql);
-            echo "Table users created successfully" . PHP_EOL;
+            Helper::consoleLog("Table users created successfully");
         } catch (PDOException $e) {
             die("Error creating table: " . $e->getMessage() . PHP_EOL);
         }
@@ -160,16 +159,16 @@ class CSVProcessor
 
             if ($this->isDryRun) {
                 $this->db->pdo->rollBack();
-                echo "Dry run completed. No data inserted into the database." . PHP_EOL;
+                Helper::consoleLog("Dry run completed. No data inserted into the database.");
                 exit;
             }
 
             $this->db->pdo->commit();
-            echo "Success! All data imported successfully into the database." . PHP_EOL;
+            Helper::consoleLog("Success! All data imported successfully into the database.");
 
         } catch (Exception $e) {
             $this->db->pdo->rollBack();
-            echo "Data import failed with Error: " . $e->getMessage() . PHP_EOL;
+            die("Data import failed with Error: " . $e->getMessage() . PHP_EOL);
         }
     }
 }
@@ -208,6 +207,30 @@ class Helper
         // remove white space and make lowercase
         return strtolower(trim($string));
     }
+
+    public static function consoleLog(string $message): void
+    {
+        fwrite(STDOUT, $message . PHP_EOL);
+    }
+
+    // Display Help menu
+    public static function consoleHelp(): void
+    {
+        $help = <<<HELP
+        Usage: php user_upload.php [options]
+
+        Options:
+            --file [csv file name]      Name of the CSV to be parsed
+            --create_table              Build the MySQL users table and no further action will be taken
+            --dry_run                   Used with the --file option to run the script but not insert into the DB.
+            -u [MySQL username]         MySQL username
+            -p [MySQL password]         MySQL password
+            -h [MySQL host]             MySQL host
+            --help                      Output this help and exit
+        HELP;
+        echo $help . PHP_EOL;
+        exit;
+    }
 }
 
 // Main class to handle the main script
@@ -225,7 +248,7 @@ class Main
         $this->options = getopt("u:p:h:", ["file:", "create_table", "dry_run", "help"]);
 
         if (empty($this->options) || isset($this->options['help'])) {
-            $this->consoleHelp();
+            Helper::consoleHelp();
         }
 
         $this->dbConfig = DBConfig::getInstance($this->options);
@@ -244,7 +267,7 @@ class Main
         try {
             $this->db = new Database($this->dbConfig);
         } catch (Exception $e) {
-            echo "Database connection error: " . $e->getMessage() . PHP_EOL;
+            Helper::consoleLog("Database connection error: " . $e->getMessage());
             exit;
         }
 
@@ -261,25 +284,8 @@ class Main
             $csvProcessor->parseCSV();
             exit;
         }
-        echo "Please provide the --file option or --create_table option to perform further actions." . PHP_EOL;
-    }
-    // Display Help menu
-    public function consoleHelp(): void
-    {
-        $help = <<<HELP
-        Usage: php user_upload.php [options]
 
-        Options:
-            --file [csv file name]      Name of the CSV to be parsed
-            --create_table              Build the MySQL users table and no further action will be taken
-            --dry_run                   Used with the --file option to run the script but not insert into the DB.
-            -u [MySQL username]         MySQL username
-            -p [MySQL password]         MySQL password
-            -h [MySQL host]             MySQL host
-            --help                      Output this help and exit
-        HELP;
-        echo $help . PHP_EOL;
-        exit;
+        Helper::consoleLog("Please provide the --file option or --create_table option to perform further actions.");
     }
 
 }
