@@ -152,6 +152,10 @@ class Helper
     {
         // remove white space from the beginning and end of the string
         $string = trim($string, ' ');
+
+        // remove extra white space in the middle of the string 
+        $string = preg_replace('/\s+/', ' ', $string);
+
         // capitalize the first letter of each word
         $string = ucfirst($string);
 
