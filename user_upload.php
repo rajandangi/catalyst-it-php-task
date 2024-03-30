@@ -127,6 +127,9 @@ class CSVProcessor
                 throw new Exception("Invalid CSV file format");
             }
 
+            // Initiate transaction with autocommit off
+            $this->db->pdo->beginTransaction();
+
             // Prepare the insert statement
             $stmt = $this->db->prepareInsertUser();
 
@@ -155,9 +158,18 @@ class CSVProcessor
             }
             fclose($handle);
 
+            if ($this->isDryRun) {
+                $this->db->pdo->rollBack();
+                echo "Dry run completed. No data inserted into the database." . PHP_EOL;
+                exit;
+            }
+
+            $this->db->pdo->commit();
             echo "Success! All data imported successfully into the database." . PHP_EOL;
+
         } catch (Exception $e) {
-            die("Error reading CSV file: " . $e->getMessage() . PHP_EOL);
+            $this->db->pdo->rollBack();
+            echo "Data import failed with Error: " . $e->getMessage() . PHP_EOL;
         }
     }
 }
