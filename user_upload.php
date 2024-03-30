@@ -49,7 +49,17 @@ class Database
             die("Database connection failed: " . $e->getMessage() . PHP_EOL);
         }
     }
-
+    // drop table table to rebuild
+    public function dropTable(string $tableName): void
+    {
+        $sql = "DROP TABLE IF EXISTS $tableName";
+        try {
+            $this->pdo->query($sql);
+            echo "Table $tableName dropped successfully" . PHP_EOL;
+        } catch (PDOException $e) {
+            die("Error dropping table: " . $e->getMessage() . PHP_EOL);
+        }
+    }
     // Create users table
     public function createUserTable(): void
     {
@@ -64,6 +74,57 @@ class Database
             echo "Table users created successfully" . PHP_EOL;
         } catch (PDOException $e) {
             die("Error creating table: " . $e->getMessage() . PHP_EOL);
+        }
+    }
+    // insert user data
+    public function insertUser(string $name, string $surname, string $email): void
+    {
+        $stmt = $this->pdo->prepare("INSERT INTO users (name, surname, email) VALUES (:name, :surname, :email)");
+
+        // bind and save data to database
+        $stmt->bindValue(":name", $name, PDO::PARAM_STR);
+        $stmt->bindValue(":surname", $surname, PDO::PARAM_STR);
+        $stmt->bindValue(":email", $email, PDO::PARAM_STR);
+        $stmt->execute();
+    }
+}
+
+// Parse the CSV file and to insert into the database
+class CSVProcessor
+{
+    public function __construct(
+        private string $fileName,
+        private Database $db,
+        private bool $isDryRun = false,
+    ) {
+    }
+
+    public function parseCSV(): void
+    {
+        try {
+            $handle = fopen($this->fileName, 'r');
+
+            // Get the first row (header) of the CSV file
+            $header = fgetcsv($handle, 255);
+            $header = array_map('trim', $header);
+
+            // GEt the correct index of the columns
+            $nameIndex = array_search('name', $header);
+            $surnameIndex = array_search('surname', $header);
+            $emailIndex = array_search('email', $header);
+            if ($nameIndex === false || $surnameIndex === false || $emailIndex === false) {
+                throw new Exception("Invalid CSV file format");
+            }
+            while (($row = fgetcsv($handle, 255)) !== false) {
+                $name = $row[$nameIndex];
+                $surname = $row[$surnameIndex];
+                $email = $row[$emailIndex];
+                $this->db->insertUser($name, $surname, $email);
+            }
+            fclose($handle);
+            echo "Success! All data imported successfully into the database." . PHP_EOL;
+        } catch (Exception $e) {
+            die("Error reading CSV file: " . $e->getMessage() . PHP_EOL);
         }
     }
 }
@@ -105,12 +166,17 @@ class Main
             exit;
         }
 
+        // Create users table and no further action will be taken
         if ($this->shouldCreateTable) {
+            $this->db->dropTable('users');
             $this->db->createUserTable();
             exit;
         }
+
+        // Parse the CSV file and insert into the database
         if ($this->hasFile) {
-            echo "Parsing file" . PHP_EOL;
+            $csvProcessor = new CSVProcessor($this->options['file'], $this->db, $this->isDryRun);
+            $csvProcessor->parseCSV();
             exit;
         }
         echo "Please provide the --file option or --create_table option to perform further actions." . PHP_EOL;
